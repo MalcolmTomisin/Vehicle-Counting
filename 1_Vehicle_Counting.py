@@ -2,8 +2,10 @@ import cv2
 from blobs.blob2 import Blob, get_centroid
 import numpy as np
 from collections import OrderedDict
+from imutils.video import FPS
 
-cap = cv2.VideoCapture('./videos/sample_traffic_scene.mp4')
+cap = cv2.VideoCapture('./videos/video_one.mp4')
+fps = FPS().start()
 
 blobs = OrderedDict()
 blob_id = 1
@@ -74,15 +76,22 @@ while True:
 
         resized_frame = cv2.resize(frame, (858, 480))
         cv2.imshow('tracking', resized_frame)
+        fps.update()
 
         frame_counter += 1
     else:
         print('End of video.')
+        fps.stop()
+        print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
+        print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
         # end video loop if on the last frame
         break
 
     # end video loop if 'q' key is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
+        fps.stop()
+        print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
+        print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
         print('Video exited.')
         break
 

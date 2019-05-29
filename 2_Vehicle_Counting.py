@@ -7,6 +7,7 @@ import uuid
 import os
 import contextlib
 from datetime import datetime
+from imutils.video import FPS
 
 
 log_file_name = 'log.txt'
@@ -16,12 +17,13 @@ log_file = open(log_file_name, 'a')
 log_file.write('vehicle_id, count, datetime\n')
 log_file.flush()
 
-cap = cv2.VideoCapture('./videos/sample_traffic_scene.mp4')
+cap = cv2.VideoCapture('./videos/IMG_0396.MOV')
+fps = FPS().start()
 
 blobs = OrderedDict()
 blob_id = 1
 frame_counter = 0
-DETECTION_FRAME_RATE = 5
+DETECTION_FRAME_RATE = 60
 MAX_CONSECUTIVE_TRACKING_FAILURES = 10
 
 # initialize trackers and create new blobs
@@ -42,7 +44,7 @@ while True:
     k = cv2.waitKey(1)
     if cap.get(cv2.CAP_PROP_POS_FRAMES) + 1 < cap.get(cv2.CAP_PROP_FRAME_COUNT):
         _, frame = cap.read()
-        
+
         for _id, blob in list(blobs.items()):
             # update trackers
             success, box = blob.tracker.update(frame)
@@ -53,7 +55,8 @@ while True:
                 # draw and label bounding boxes
                 (x, y, w, h) = [int(v) for v in box]
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                cv2.putText(frame, 'v_' + str(_id), (x, y - 2), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                cv2.putText(frame, 'v_' + str(_id), (x, y - 2),
+                            cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
             else:
                 blob.num_consecutive_tracking_failures += 1
 
@@ -66,15 +69,15 @@ while True:
                 vehicle_count += 1
 
                 # log count data to a file (vehicle_id, count, datetime)
-                _row = '{0}, {1}, {2}\n'.format('v_' + str(_id), vehicle_count, datetime.now())
+                _row = '{0}, {1}, {2}\n'.format(
+                    'v_' + str(_id), vehicle_count, datetime.now())
                 log_file.write(_row)
                 log_file.flush()
-
 
         if frame_counter >= DETECTION_FRAME_RATE:
             # rerun detection
             boxes = get_bounding_boxes(frame)
-            
+
             # add new blobs
             for box in boxes:
                 box_centroid = get_centroid(box)
@@ -106,32 +109,41 @@ while True:
                         del blobs[id_b]
                     elif blob_b.area >= blob_a.area and box_contains_point(blob_b.bounding_box, blob_a.centroid):
                         del blobs[id_a]
-            
+
             frame_counter = 0
 
         # draw counting line
         cv2.line(frame, counting_line[0], counting_line[1], (0, 255, 0), 3)
 
         # display vehicle count
-        cv2.putText(frame, 'Count: ' + str(vehicle_count), (20, 60), cv2.FONT_HERSHEY_DUPLEX, 2, (255, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(frame, 'Count: ' + str(vehicle_count), (20, 60),
+                    cv2.FONT_HERSHEY_DUPLEX, 2, (255, 0, 0), 2, cv2.LINE_AA)
 
         resized_frame = cv2.resize(frame, (858, 480))
         cv2.imshow('tracking', resized_frame)
+        fps.update()
 
         frame_counter += 1
 
         # save frame if 's' key is pressed
         if k & 0xFF == ord('s'):
-            cv2.imwrite(os.path.join('screenshots', 'ss_' + uuid.uuid4().hex + '.png'), frame)
+            cv2.imwrite(os.path.join('screenshots', 'ss_' +
+                                     uuid.uuid4().hex + '.png'), frame)
             print('Screenshot taken.')
     else:
         print('End of video.')
+        fps.stop()
+        print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
+        print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
         # end video loop if on the last frame
         break
 
     # end video loop if 'q' key is pressed
     if k & 0xFF == ord('q'):
         print('Video exited.')
+        fps.stop()
+        print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
+        print("[INFO] approx. FPS: {:.2f}".format(fps.fps())) 
         break
 
 # end capture, close window

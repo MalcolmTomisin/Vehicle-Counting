@@ -1,13 +1,30 @@
 import cv2
+from imutils.video import FPS
+from FileThreadClass import FileVideoStream
+import numpy as np
+import time
 
-cap = cv2.VideoCapture('../videos/sample_traffic_scene.mp4')
+    
 
-while True:
-    ret, frame = cap.read()
-    cv2.imshow('video capture', frame)
+fvs = FileVideoStream('../videos/IMG_0396.MOV').start()
+time.sleep(1.0)
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+fps = FPS().start()
 
-cap.release()
-cv2.destroyAllWindows()
+while fvs.more():
+        if (cv2.waitKey(1) == ord("q")):
+            fps.stop()
+            print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
+            print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
+            break
+
+        frame = fvs.read()
+        print("[INFO] elasped time")
+        frame = np.dstack([frame, frame, frame])
+        cv2.putText(frame, "Queue Size: {}".format(fvs.Q.qsize()),
+                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        cv2.imshow("Video", frame)
+        fps.update()
+     
+
+
